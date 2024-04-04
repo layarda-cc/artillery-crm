@@ -1,7 +1,7 @@
 import io from 'socket.io-client';
 
 const url = process.env.URL || "http://127.0.0.1:8041"; // tweak this as your environment
-const MAX_CLIENTS = 200; // tweak this to max client
+const MAX_CLIENTS = 300; // tweak this to max client
 // const MIN_CLIENTS = 5; // tweak this to min client
 let RAMP_TIME_SECONDS = 60; // tweak this to how long to ramp it?
 // const POLLING_PERCENTAGE = 0.05;
@@ -55,6 +55,9 @@ const artillery = async () => {
     setTimeout(() => {
         socket.emit("requestNewConversation", { "text": firstMessage });
         requestNewConversationCounter++;
+        if (socket.id !== undefined) {
+            lastEmitTime.set(socket.id, new Date())
+        }
     }, 1000)
 
     const socketDisconnector = () => {
@@ -81,6 +84,9 @@ const artillery = async () => {
 
     socket.on("newConversation", (convID: string) => {
         respNewConversationCounter++;
+        if (socket.id !== undefined) {
+            lastEmitTime.set(socket.id, new Date())
+        }
 
         const emitMessage = (conversationID: string, startTime: Date) => {
             return () => {
