@@ -1,0 +1,19 @@
+{
+  "name": "artillery-crm",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "packageManager": "yarn@4.1.1",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node -r ts-node/register index.ts"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.7.2",
+    "typescript": "^5.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.4",
+    "ts-node": "^10.9.2"
+  }
+}
