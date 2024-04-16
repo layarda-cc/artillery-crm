@@ -1,7 +1,7 @@
 import io from 'socket.io-client';
 
 const url = process.env.URL || "http://127.0.0.1:8041"; // tweak this as your environment
-const MAX_CLIENTS = 300; // tweak this to max client
+const MAX_CLIENTS = 2000; // tweak this to max client
 // const MIN_CLIENTS = 5; // tweak this to min client
 let RAMP_TIME_SECONDS = 60; // tweak this to how long to ramp it?
 // const POLLING_PERCENTAGE = 0.05;
@@ -29,6 +29,16 @@ let isStart = false;
 
 
 let lastEmitTime: Map<string, Date> = new Map();
+let flagReady = false;
+
+// function customEmit(socket: Socket, event: string, args: any) {
+//     socket.emit(event, args, (err: any) => {
+//         console.log("error on customEmit:", err)
+//         if (err) {
+//             customEmit(socket, event, args)
+//         }
+//     })
+// }
 
 const artillery = async () => {
     // const transports =
@@ -53,7 +63,10 @@ const artillery = async () => {
     clientCount++;
 
     setTimeout(() => {
-        socket.emit("requestNewConversation", { "text": firstMessage });
+        // customEmit(socket, "requestNewConversation", { "text": firstMessage })
+        socket.emit("requestNewConversation", { "text": firstMessage }, (error: any, response: any) => {
+            console.log("requestNewConversation:", response, "error:", error)
+        });
         requestNewConversationCounter++;
         if (socket.id !== undefined) {
             lastEmitTime.set(socket.id, new Date(new Date().getTime() + 15000))
@@ -65,13 +78,13 @@ const artillery = async () => {
         const key = socket.id ?? ''
         const lastTime = lastEmitTime.get(key)
 
-        const durationInactivitySecond = 5
+        const durationInactivitySecond = 10
         let elapseSecond = 0
         if (lastTime !== undefined) {
             elapseSecond = (now.getTime() - lastTime.getTime()) / 1000
         }
 
-        if (elapseSecond >= durationInactivitySecond) {
+        if (elapseSecond >= durationInactivitySecond && flagReady) {
             socket.disconnect()
             lastEmitTime.delete(key)
             return
@@ -81,6 +94,25 @@ const artillery = async () => {
     }
 
     socketDisconnector()
+
+    const flagChecker = () => {
+        const key = socket.id ?? ''
+        const lastTime = lastEmitTime.get(key)
+
+        const durationInactivitySecond = 10
+        let elapseSecond = 0
+        if (lastTime !== undefined) {
+            elapseSecond = (new Date().getTime() - lastTime.getTime()) / 1000
+        }
+
+        if (elapseSecond >= durationInactivitySecond) {
+            flagReady = true
+            return
+        }
+
+        setTimeout(flagChecker, 1000)
+    }
+    flagChecker()
 
     socket.on("newConversation", (convID: string) => {
         respNewConversationCounter++;
@@ -94,10 +126,12 @@ const artillery = async () => {
                 const now = new Date()
                 const elapsedSecond: number = Math.ceil((Math.ceil(now.getTime() - startTime.getTime())) / 1000);
 
-                socket.emit("message", { "text": secondMessage });
-                messageCounter++;
-                if (socket.id !== undefined) {
-                    lastEmitTime.set(socket.id, new Date())
+                if (flagReady) {
+                    socket.emit("message", { "text": secondMessage });
+                    messageCounter++;
+                    if (socket.id !== undefined) {
+                        lastEmitTime.set(socket.id, new Date())
+                    }
                 }
 
                 socket.on("message", (data) => {
@@ -142,6 +176,10 @@ const artillery = async () => {
         clientDisconnectedCount++;
     });
 
+    socket.on("error", (msg) => {
+        console.log("got error", msg)
+    })
+
     firstMessagecount++;
 
     if (clientCount < MAX_CLIENTS) {
@@ -184,9 +222,9 @@ const printReport = () => {
         `average packets server response new conversation RPS: ${newConvRepliadPerSeconds}; average packets server response send message RPS: ${msgRepliedPerSeconds}`,
         "\n",
         "total new conv sent: ", totalNewConv, "\n",
-        "total new conv replied:", totalNewConvReplied, "\n",
+        "total new conv created:", totalNewConvReplied, "\n",
         "total message sent: ", totalMessageSent, "\n",
-        "total message replied:", totalRepliedMessage, "\n",
+        "total message created:", totalRepliedMessage, "\n",
         `=======\n\n`
     );
 
@@ -202,13 +240,16 @@ artillery();
 
 const reportJob = setInterval(printReport, 1000);
 
+let timer = 5
 const stopper = () => {
+    const timerEnd = `${timer} ${timer > 1 ? 'seconds' : 'second'}`
     if (lastEmitTime.size === 0 && isStart === true) {
-        console.log("stopping the artillery")
+        console.log(`stopping the artillery report in ${timerEnd}`)
         setTimeout(() => {
             clearInterval(reportJob)
             process.exit(0);
-        })
+        }, 5000)
+        timer--
     }
 
     setTimeout(stopper, 1000)
