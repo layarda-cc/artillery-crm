@@ -65,7 +65,7 @@ const artillery = async () => {
         const key = socket.id ?? ''
         const lastTime = lastEmitTime.get(key)
 
-        const durationInactivitySecond = 10
+        const durationInactivitySecond = 5
         let elapseSecond = 0
         if (lastTime !== undefined) {
             elapseSecond = (now.getTime() - lastTime.getTime()) / 1000
@@ -80,13 +80,13 @@ const artillery = async () => {
         setTimeout(socketDisconnector, 1000)
     }
 
-    socketDisconnector()
-
     socket.on("newConversation", (convID: string) => {
         respNewConversationCounter++;
         if (socket.id !== undefined) {
             lastEmitTime.set(socket.id, new Date())
         }
+
+        socketDisconnector()
 
         const emitMessage = (conversationID: string, startTime: Date) => {
             return () => {
