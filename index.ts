@@ -56,7 +56,7 @@ const artillery = async () => {
         socket.emit("requestNewConversation", { "text": firstMessage });
         requestNewConversationCounter++;
         if (socket.id !== undefined) {
-            lastEmitTime.set(socket.id, new Date())
+            lastEmitTime.set(socket.id, new Date(new Date().getTime() + 15000))
         }
     }, 1000)
 
@@ -80,13 +80,13 @@ const artillery = async () => {
         setTimeout(socketDisconnector, 1000)
     }
 
+    socketDisconnector()
+
     socket.on("newConversation", (convID: string) => {
         respNewConversationCounter++;
         if (socket.id !== undefined) {
             lastEmitTime.set(socket.id, new Date())
         }
-
-        socketDisconnector()
 
         const emitMessage = (conversationID: string, startTime: Date) => {
             return () => {
