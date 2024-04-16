@@ -65,7 +65,7 @@ const artillery = async () => {
         const key = socket.id ?? ''
         const lastTime = lastEmitTime.get(key)
 
-        const durationInactivitySecond = 5
+        const durationInactivitySecond = 10
         let elapseSecond = 0
         if (lastTime !== undefined) {
             elapseSecond = (now.getTime() - lastTime.getTime()) / 1000
@@ -204,7 +204,7 @@ const reportJob = setInterval(printReport, 1000);
 
 const stopper = () => {
     if (lastEmitTime.size === 0 && isStart === true) {
-        console.log("stop the artillery in 5 second")
+        console.log("stopping the artillery")
         setTimeout(() => {
             clearInterval(reportJob)
             process.exit(0);
